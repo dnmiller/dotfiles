@@ -71,7 +71,7 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git osx bgnotify cargo chucknorris colored-man-pages dirhistory history-substring-search jsontools last-working-dir python repo vagrant)
+plugins=(git osx bgnotify cargo chucknorris colored-man-pages dirhistory history-substring-search jsontools last-working-dir python pyenv)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -154,3 +154,6 @@ export PATH="/usr/local/sbin:$PATH"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# Poetry...
+export PATH="$HOME/.poetry/bin:$PATH"
