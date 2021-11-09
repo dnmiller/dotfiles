@@ -71,7 +71,11 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
+<<<<<<< HEAD
 plugins=(direnv git macos bgnotify cargo chucknorris colored-man-pages dirhistory history-substring-search jsontools last-working-dir python repo vagrant)
+=======
+plugins=(git osx bgnotify cargo chucknorris colored-man-pages dirhistory history-substring-search jsontools last-working-dir python pyenv)
+>>>>>>> 43a1382ecd4989997431b5219a397523d7711eb8
 
 source $ZSH/oh-my-zsh.sh
 
@@ -81,13 +85,6 @@ source $ZSH/oh-my-zsh.sh
 
 # You may need to manually set your language environment
 # export LANG=en_US.UTF-8
-
-# Preferred editor for local and remote sessions
-if [[ -n $SSH_CONNECTION ]]; then
-  export EDITOR='vim'
-else
-  export EDITOR='nvim'
-fi
 
 # Compilation flags
 # export ARCHFLAGS="-arch x86_64"
@@ -154,6 +151,10 @@ export PATH="/usr/local/sbin:$PATH"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
 if [ -e /home/danielmil/.nix-profile/etc/profile.d/nix.sh ]; then . /home/danielmil/.nix-profile/etc/profile.d/nix.sh; fi # added by Nix installer
 
 eval "$(ssh-agent -s)"
+
+# Poetry...
+export PATH="$HOME/.poetry/bin:$PATH"
