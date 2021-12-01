@@ -71,7 +71,7 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(direnv git macos bgnotify cargo chucknorris colored-man-pages dirhistory history-substring-search jsontools last-working-dir python repo vagrant)
+plugins=(direnv git macos bgnotify cargo chucknorris colored-man-pages dirhistory history-substring-search jsontools last-working-dir python pyenv)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -150,7 +150,10 @@ export PATH="/usr/local/sbin:$PATH"
 
 if [ -e /home/danielmil/.nix-profile/etc/profile.d/nix.sh ]; then . /home/danielmil/.nix-profile/etc/profile.d/nix.sh; fi # added by Nix installer
 
-eval "$(ssh-agent -s)" >/dev/null
+eval "$(ssh-agent -s)"> /dev/null
 
 # Poetry...
 export PATH="$HOME/.poetry/bin:$PATH"
+
+# Pyenv
+eval "$(pyenv init -)"
