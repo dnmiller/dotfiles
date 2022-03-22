@@ -10,7 +10,9 @@ Setting up a new Mac:
 3. Install homebrew.
 4. Make new ssh keys and add to github/bitbucket.
 5. Install [Oh-My-Zsh](https://ohmyz.sh/#install).
-6. Clone dotfiles.
+6. Clone dotfiles: `git clone --bare git@github.com:dnmiller/dotfiles.git ~/.dotfiles/.git`
+7. Add alias: `alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/.git/ --work-tree=$HOME'`
+8. Checkout dotfiles: `config checkout`
 
 Setting up a new Linux box:
 1. Run system update.
