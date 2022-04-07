@@ -157,3 +157,13 @@ export PATH="$HOME/.poetry/bin:$PATH"
 
 # Pyenv
 eval "$(pyenv init -)"
+
+# On Linux, let keychain manage the ssh keys.
+case `uname` in
+  Darwin)
+    # Handled with ssh-add -K option
+  ;;
+  Linux)
+    eval `keychain --agents ssh --eval id_rsa`
+  ;;
+esac
