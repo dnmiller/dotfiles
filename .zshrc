@@ -161,9 +161,9 @@ eval "$(pyenv init -)"
 # On Linux, let keychain manage the ssh keys.
 case `uname` in
   Darwin)
-    # Handled with ssh-add -K option
+    eval `ssh-add --apple-use-keychain --apple-load-keychain  ~/.ssh/id_ed25519`
   ;;
   Linux)
-    eval `keychain --agents ssh --eval id_rsa`
+    eval `keychain --agents ssh --eval id_ed25519`
   ;;
 esac
