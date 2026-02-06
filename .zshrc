@@ -167,3 +167,7 @@ case `uname` in
     eval `keychain --agents ssh --eval id_ed25519`
   ;;
 esac
+
+echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"

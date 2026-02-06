@@ -8,13 +8,14 @@ Install Powerlevel10k:
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 ```
 
+Then ssh key:
+```
+ssh-keygen -t ed25519 -C "[host name]"
+```
+
 Then dotfiles:
 ```
 alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/.git/ --work-tree=$HOME' && echo ".dotfiles" >> .gitignore && git clone --bare git@github.com:dnmiller/dotfiles.git $HOME/.dotfiles/.git
 config checkout
 ```
 
-Then ssh key:
-```
-ssh-keygen -t ed25519 -C "[host name]"
-```
