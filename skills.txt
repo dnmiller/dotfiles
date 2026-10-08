@@ -1,0 +1,18 @@
+# Agent skills manifest, consumed by skills.sh (via the `skills` npx CLI).
+#
+# Format: one source per line.
+#   <source> [skill ...]
+#
+#   <source>  A skills source understood by `npx skills add`:
+#             GitHub shorthand (owner/repo), a full git/GitHub/GitLab URL,
+#             or a local path.
+#   [skill]   Optional space-separated skill names to install from that
+#             source. Omit to install ALL skills from the source ('*').
+#
+# Lines starting with # and blank lines are ignored. Inline # comments are
+# stripped. Skills are installed globally for Cursor (~/.cursor/skills/).
+# Override the target agent(s) with SKILLS_AGENTS, or scope with
+# SKILLS_SCOPE=project. See skills.sh.
+
+# https://github.com/mattpocock/skills  -- Skills for Real Engineers
+mattpocock/skills

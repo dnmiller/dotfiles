@@ -141,8 +141,12 @@ alias nvim='NVIM_TUI_ENABLE_TRUE_COLOR=1 nvim'
 # Make zsh know about hosts already accessed by SSH
 zstyle -e ':completion:*:(ssh|scp|sftp|rsh|rsync):hosts' hosts 'reply=(${=${${(f)"$(cat {/etc/ssh_,~/.ssh/known_}hosts(|2)(N) /dev/null)"}%%[# ]*}//,/ })'
 
-# Manage config files in headless git repo
-alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/.git/ --work-tree=$HOME'
+# Quick access to the dotfiles repo (adjust path if cloned elsewhere).
+export DOTFILES="${DOTFILES:-$HOME/.dotfiles}"
+alias dotfiles='git -C "$DOTFILES"'
+# Agent skills (see $DOTFILES/skills.txt): install from manifest / update all.
+alias skills-sync='"$DOTFILES/skills.sh"'
+alias skills-update='"$DOTFILES/skills.sh" update'
 export PATH="/usr/local/sbin:$PATH"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
@@ -158,6 +162,11 @@ export PATH="$HOME/.poetry/bin:$PATH"
 # Pyenv
 eval "$(pyenv init -)"
 
+# nvm (Node Version Manager)
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
 # On Linux, let keychain manage the ssh keys.
 case `uname` in
   Darwin)
@@ -168,6 +177,9 @@ case `uname` in
   ;;
 esac
 
-echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
-export PATH="/opt/homebrew/bin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
+# Homebrew (macOS Apple Silicon / Linuxbrew), only if present.
+if [ -d /opt/homebrew/bin ]; then
+  export PATH="/opt/homebrew/bin:$PATH"
+elif [ -d /home/linuxbrew/.linuxbrew/bin ]; then
+  export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+fi
