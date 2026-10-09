@@ -154,8 +154,6 @@ export PATH="/usr/local/sbin:$PATH"
 
 if [ -e /home/danielmil/.nix-profile/etc/profile.d/nix.sh ]; then . /home/danielmil/.nix-profile/etc/profile.d/nix.sh; fi # added by Nix installer
 
-eval "$(ssh-agent -s)"> /dev/null
-
 # Poetry...
 export PATH="$HOME/.poetry/bin:$PATH"
 
@@ -167,15 +165,34 @@ export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-# On Linux, let keychain manage the ssh keys.
-case `uname` in
+# Load the default SSH key. Reuse a forwarded agent when one is already up.
+# keychain is optional; ssh-agent plus ssh-add is the fallback.
+_ensure_ssh_agent() {
+  if [[ -n "${SSH_AUTH_SOCK:-}" && -S "${SSH_AUTH_SOCK}" ]]; then
+    ssh-add -l >/dev/null 2>&1
+    local status=$?
+    # 0 = identities loaded, 1 = agent up but empty, 2 = cannot reach the agent.
+    [[ "$status" -ne 2 ]] && return 0
+  fi
+  eval "$(ssh-agent -s)" >/dev/null
+}
+
+case "$(uname)" in
   Darwin)
-    eval `ssh-add --apple-use-keychain --apple-load-keychain  -q ~/.ssh/id_ed25519`
-  ;;
+    ssh-add --apple-use-keychain --apple-load-keychain -q "$HOME/.ssh/id_ed25519" 2>/dev/null || true
+    ;;
   Linux)
-    eval `keychain --agents ssh --eval id_ed25519`
-  ;;
+    if command -v keychain >/dev/null 2>&1; then
+      eval "$(keychain --agents ssh --eval id_ed25519)"
+    else
+      _ensure_ssh_agent
+      if [[ -f "$HOME/.ssh/id_ed25519" ]]; then
+        ssh-add -q "$HOME/.ssh/id_ed25519" 2>/dev/null || true
+      fi
+    fi
+    ;;
 esac
+unfunction _ensure_ssh_agent 2>/dev/null || true
 
 # Homebrew (macOS Apple Silicon / Linuxbrew), only if present.
 if [ -d /opt/homebrew/bin ]; then
