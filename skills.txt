@@ -5,7 +5,7 @@
 #
 #   <source>  A skills source understood by `npx skills add`:
 #             GitHub shorthand (owner/repo), a full git/GitHub/GitLab URL,
-#             or a local path.
+#             or a local path relative to this directory (./skills).
 #   [skill]   Optional space-separated skill names to install from that
 #             source. Omit to install ALL skills from the source ('*').
 #

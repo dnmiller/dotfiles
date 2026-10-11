@@ -34,7 +34,8 @@ with the [`skills`](https://github.com/vercel-labs/skills) CLI via `npx`, driven
 by a declarative manifest, [`skills.txt`](skills.txt). Add a source per line:
 
 ```
-# owner/repo, a full git/GitHub/GitLab URL, or a local path.
+# owner/repo, a full git/GitHub/GitLab URL, or a local path
+# relative to this repo (./skills).
 # Optionally list specific skill names after the source; omit for all.
 mattpocock/skills
 ```
