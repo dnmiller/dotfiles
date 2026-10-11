@@ -16,3 +16,6 @@
 
 # https://github.com/mattpocock/skills  -- Skills for Real Engineers
 mattpocock/skills
+
+# Personal skills in this repo.
+./skills
