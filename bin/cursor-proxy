@@ -34,10 +34,26 @@ find_bin() {
 
 healthy() { curl -sf -m 2 "$URL/health" >/dev/null 2>&1; }
 
+# Access token saved by `agent login` (empty if none). The proxy runs the CLI
+# with a fake HOME on Linux, so the CLI can't find this itself and the proxy
+# would start a browser login; handing the token over avoids that.
+saved_token() {
+  local f node
+  if [ "$(uname)" = Darwin ]; then f="$HOME/.cursor/auth.json"
+  else f="${XDG_CONFIG_HOME:-$HOME/.config}/cursor/auth.json"; fi
+  [ -r "$f" ] || return 0
+  node="$(find_bin node)" || return 0
+  "$node" -e 'try { process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).accessToken || ""); } catch {}' "$f"
+}
+
 start() {
   healthy && return 0
-  local bin
+  local bin token=""
   bin="$(find_bin cursor-api-proxy)" || die "cursor-api-proxy not installed (re-run ~/.dotfiles/install.sh)."
+  if [ -z "${CURSOR_API_KEY:-}${CURSOR_AUTH_TOKEN:-}" ]; then
+    token="$(saved_token)"
+    [ -n "$token" ] || warn "No Cursor sign-in found; run: cursor-proxy login (or set CURSOR_API_KEY)."
+  fi
   mkdir -p "$STATE_DIR"
   # ACP is what lets the model call opencode's tools; without it replies are text-only.
   # Detached from this shell so it outlives the terminal that started it.
@@ -45,6 +61,7 @@ start() {
     cd "$HOME"
     export CURSOR_BRIDGE_USE_ACP=true CURSOR_BRIDGE_PORT="$PORT"
     export CURSOR_BRIDGE_TIMEOUT_MS="${CURSOR_BRIDGE_TIMEOUT_MS:-1800000}"
+    [ -z "$token" ] || export CURSOR_AUTH_TOKEN="$token"
     if command -v setsid >/dev/null 2>&1; then
       setsid nohup "$bin" >>"$LOG" 2>&1 </dev/null &
     else
@@ -115,6 +132,8 @@ login() {
     export NO_OPEN_BROWSER=1
   fi
   "$agent" login
+  # Restart so the proxy picks up the new token.
+  stop 2>/dev/null || true
   sync_models
 }
 
