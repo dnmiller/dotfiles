@@ -1,0 +1,5 @@
+# Cmd+h/j/k/l -> tmux pane focus (see user-keys in ~/.tmux.conf).
+keybind = cmd+h=text:\x1b[9001~
+keybind = cmd+j=text:\x1b[9002~
+keybind = cmd+k=text:\x1b[9003~
+keybind = cmd+l=text:\x1b[9004~
