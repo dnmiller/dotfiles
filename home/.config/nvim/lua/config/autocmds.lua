@@ -6,10 +6,17 @@
 -- cursor line). The characters are still in the file, they just aren't drawn.
 -- conceallevel is window-local, so also reapply it whenever a markdown buffer
 -- is shown in a window, not only when the filetype is first set.
+-- Deferred with vim.schedule so it runs after any other FileType/BufWinEnter
+-- handler (plugins, treesitter start) that might set conceallevel again.
 local function show_markdown_backticks(ev)
-  if vim.bo[ev.buf].filetype:find("^markdown") then
-    vim.wo.conceallevel = 0
-  end
+  vim.schedule(function()
+    if not vim.api.nvim_buf_is_valid(ev.buf) or not vim.bo[ev.buf].filetype:find("^markdown") then
+      return
+    end
+    for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
+      vim.wo[win].conceallevel = 0
+    end
+  end)
 end
 
 vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter" }, {
