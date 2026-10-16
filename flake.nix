@@ -17,6 +17,7 @@
             dust
             tldr
             gh
+            uv
             # LazyVim dependencies
             ripgrep
             fd

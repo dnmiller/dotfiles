@@ -185,26 +185,37 @@ install_tools() {
 # A user prefix avoids needing write access to the global npm dir.
 NPM_PREFIX="$HOME/.local"
 
+# npm plugins added to the global opencode config (~/.config/opencode/opencode.jsonc).
+OPENCODE_PLUGINS=(
+  opencode-cursor-oauth   # Cursor models via OAuth; run /connect -> Cursor once
+)
+
 install_opencode() {
   if [ "${SKIP_OPENCODE:-}" = "1" ]; then
     info "SKIP_OPENCODE=1 set; skipping OpenCode."
     return
   fi
-  if [ -x "$NPM_PREFIX/bin/opencode2" ]; then
-    info "OpenCode already installed ($("$NPM_PREFIX/bin/opencode2" --version 2>/dev/null || echo '?'))."
-    return
-  fi
-  if ! have npm; then
+  local bin="$NPM_PREFIX/bin/opencode2" plugin
+  if [ -x "$bin" ]; then
+    info "OpenCode already installed ($("$bin" --version 2>/dev/null || echo '?'))."
+  elif ! have npm; then
     warn "npm not found; skipping OpenCode."
     return
-  fi
-  info "Installing OpenCode 2 (npm @opencode/cli)..."
-  # postinstall selects the platform binary; newer npm skips it unless allowed.
-  if npm install -g --prefix "$NPM_PREFIX" --allow-scripts=@opencode/cli @opencode/cli; then
-    info "Installed OpenCode $("$NPM_PREFIX/bin/opencode2" --version 2>/dev/null || echo '?')"
   else
-    warn "OpenCode install failed (see above). Re-run: $DOTFILES_DIR/install.sh"
+    info "Installing OpenCode 2 (npm @opencode/cli)..."
+    # postinstall selects the platform binary; newer npm skips it unless allowed.
+    if npm install -g --prefix "$NPM_PREFIX" --allow-scripts=@opencode/cli @opencode/cli; then
+      info "Installed OpenCode $("$bin" --version 2>/dev/null || echo '?')"
+    else
+      warn "OpenCode install failed (see above). Re-run: $DOTFILES_DIR/install.sh"
+      return
+    fi
   fi
+  # `plugin add` is idempotent ("already configured") and keeps other config.
+  for plugin in "${OPENCODE_PLUGINS[@]}"; do
+    "$bin" plugin add "$plugin" </dev/null \
+      || warn "opencode plugin add $plugin failed (see above)."
+  done
 }
 
 # --- CodeGraph (npm) ---------------------------------------------------------
@@ -267,6 +278,60 @@ install_rtk() {
     || warn "rtk init (opencode) failed:"$'\n'"$out"
 }
 
+# --- marker-pdf (uv tool) ----------------------------------------------------
+# PDF -> markdown (https://github.com/datalab-to/marker), in its own uv-managed
+# venv with `marker`/`marker_single` in ~/.local/bin. --torch-backend auto
+# picks the PyTorch CUDA build matching the NVIDIA driver (CPU if no GPU is
+# visible); PyPI's default aarch64 torch is CPU-only. If a GPU is added to the
+# container later, re-run with MARKER_REINSTALL=1.
+MARKER_PYTHON="${MARKER_PYTHON:-3.12}"
+
+install_marker() {
+  if [ "${SKIP_MARKER:-}" = "1" ]; then
+    info "SKIP_MARKER=1 set; skipping marker-pdf."
+    return
+  fi
+  local uv
+  if [ -x "$TOOLS_LINK/bin/uv" ]; then uv="$TOOLS_LINK/bin/uv"
+  elif have uv; then uv="$(command -v uv)"
+  else
+    warn "uv not found (built from flake.nix); skipping marker-pdf."
+    return
+  fi
+
+  local reinstall=()
+  [ "${MARKER_REINSTALL:-}" = "1" ] && reinstall=(--reinstall)
+  info "Installing marker-pdf[full] (uv tool, torch backend: auto)..."
+  if ! "$uv" tool install "${reinstall[@]}" --python "$MARKER_PYTHON" \
+      --torch-backend auto "marker-pdf[full]"; then
+    warn "marker-pdf install failed (see above). Re-run: $DOTFILES_DIR/install.sh"
+    return
+  fi
+
+  local py check
+  py="$("$uv" tool dir)/marker-pdf/bin/python"
+  # Run a real kernel: is_available() can be true while the wheel lacks this GPU's arch.
+  check="$("$py" - <<'PY' 2>&1
+import torch
+if not torch.cuda.is_available():
+    print(f"cpu torch={torch.__version__}")
+else:
+    torch.ones(8, device="cuda").sum().item()
+    print(f"cuda torch={torch.__version__} gpu={torch.cuda.get_device_name(0)}")
+PY
+)" || check="error ${check##*$'\n'}"
+  case "$check" in
+    cuda*) info "marker-pdf GPU mode OK ($check)." ;;
+    *)
+      if have nvidia-smi; then
+        warn "marker-pdf: NVIDIA GPU present but torch can't use it ($check). Try: MARKER_REINSTALL=1 $DOTFILES_DIR/install.sh"
+      else
+        warn "marker-pdf: no NVIDIA GPU visible (nvidia-smi missing); running on CPU ($check)."
+      fi
+      ;;
+  esac
+}
+
 # --- Agent skills ------------------------------------------------------------
 install_skills() {
   if [ "${SKIP_SKILLS:-}" = "1" ]; then
@@ -303,6 +368,7 @@ main() {
   install_p10k
   link_dotfiles
   install_tools
+  install_marker
   install_nvm
   install_opencode
   install_codegraph
