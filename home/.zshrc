@@ -154,6 +154,10 @@ export CODEGRAPH_TELEMETRY=0
 # install.sh.
 export PATH="$HOME/.local/state/dotfiles/tools/bin:$HOME/.local/bin:$PATH"
 
+# opencode's "cursor" provider talks to a local proxy; start it if it's down.
+opencode()  { (( $+commands[cursor-proxy] )) && cursor-proxy start --quiet; command opencode "$@"; }
+opencode2() { (( $+commands[cursor-proxy] )) && cursor-proxy start --quiet; command opencode2 "$@"; }
+
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 

@@ -185,17 +185,12 @@ install_tools() {
 # A user prefix avoids needing write access to the global npm dir.
 NPM_PREFIX="$HOME/.local"
 
-# npm plugins added to the global opencode config (~/.config/opencode/opencode.jsonc).
-OPENCODE_PLUGINS=(
-  opencode-cursor-oauth   # Cursor models via OAuth; run /connect -> Cursor once
-)
-
 install_opencode() {
   if [ "${SKIP_OPENCODE:-}" = "1" ]; then
     info "SKIP_OPENCODE=1 set; skipping OpenCode."
     return
   fi
-  local bin="$NPM_PREFIX/bin/opencode2" plugin
+  local bin="$NPM_PREFIX/bin/opencode2"
   if [ -x "$bin" ]; then
     info "OpenCode already installed ($("$bin" --version 2>/dev/null || echo '?'))."
   elif ! have npm; then
@@ -211,11 +206,53 @@ install_opencode() {
       return
     fi
   fi
-  # `plugin add` is idempotent ("already configured") and keeps other config.
-  for plugin in "${OPENCODE_PLUGINS[@]}"; do
-    "$bin" plugin add "$plugin" </dev/null \
-      || warn "opencode plugin add $plugin failed (see above)."
-  done
+  # Fails to load on opencode >= 2.0.4 (ephraimduncan/opencode-cursor#39);
+  # replaced by the cursor provider below.
+  if grep -qs '"opencode-cursor-oauth"' "$HOME/.config/opencode/opencode.json"; then
+    "$bin" plugin remove opencode-cursor-oauth </dev/null >/dev/null \
+      || warn "Could not remove the broken opencode-cursor-oauth plugin."
+  fi
+}
+
+# --- Cursor models in opencode -----------------------------------------------
+# cursor-api-proxy serves Cursor's `agent` CLI as an OpenAI-compatible API on
+# 127.0.0.1:8765, and bin/cursor-proxy registers it as opencode provider
+# "cursor". The .zshrc opencode wrappers start the proxy on demand.
+install_cursor_proxy() {
+  if [ "${SKIP_CURSOR_PROXY:-}" = "1" ]; then
+    info "SKIP_CURSOR_PROXY=1 set; skipping Cursor proxy."
+    return
+  fi
+  mkdir -p "$NPM_PREFIX/bin"
+  link_file "$DOTFILES_DIR/bin/cursor-proxy" "$NPM_PREFIX/bin/cursor-proxy"
+
+  if [ -x "$NPM_PREFIX/bin/agent" ] || have agent || have cursor-agent; then
+    info "Cursor CLI already installed."
+  else
+    info "Installing Cursor CLI (agent)..."
+    curl -fsS https://cursor.com/install | bash \
+      || { warn "Cursor CLI install failed (see above). Re-run: $DOTFILES_DIR/install.sh"; return; }
+  fi
+
+  if [ -x "$NPM_PREFIX/bin/cursor-api-proxy" ]; then
+    info "cursor-api-proxy already installed."
+  elif ! have npm; then
+    warn "npm not found; skipping cursor-api-proxy."
+    return
+  else
+    info "Installing cursor-api-proxy (npm)..."
+    npm install -g --prefix "$NPM_PREFIX" cursor-api-proxy \
+      || { warn "cursor-api-proxy install failed (see above). Re-run: $DOTFILES_DIR/install.sh"; return; }
+  fi
+
+  local agent
+  agent="$(command -v agent || command -v cursor-agent || echo "$NPM_PREFIX/bin/agent")"
+  if [ -n "${CURSOR_API_KEY:-}" ] || "$agent" status --format json 2>/dev/null | grep -q '"isAuthenticated": *true'; then
+    "$NPM_PREFIX/bin/cursor-proxy" sync-models \
+      || warn "Could not sync Cursor models into opencode. Re-run: cursor-proxy sync-models"
+  else
+    info "To use Cursor models in opencode, run once: cursor-proxy login"
+  fi
 }
 
 # --- CodeGraph (npm) ---------------------------------------------------------
@@ -278,60 +315,6 @@ install_rtk() {
     || warn "rtk init (opencode) failed:"$'\n'"$out"
 }
 
-# --- marker-pdf (uv tool) ----------------------------------------------------
-# PDF -> markdown (https://github.com/datalab-to/marker), in its own uv-managed
-# venv with `marker`/`marker_single` in ~/.local/bin. --torch-backend auto
-# picks the PyTorch CUDA build matching the NVIDIA driver (CPU if no GPU is
-# visible); PyPI's default aarch64 torch is CPU-only. If a GPU is added to the
-# container later, re-run with MARKER_REINSTALL=1.
-MARKER_PYTHON="${MARKER_PYTHON:-3.12}"
-
-install_marker() {
-  if [ "${SKIP_MARKER:-}" = "1" ]; then
-    info "SKIP_MARKER=1 set; skipping marker-pdf."
-    return
-  fi
-  local uv
-  if [ -x "$TOOLS_LINK/bin/uv" ]; then uv="$TOOLS_LINK/bin/uv"
-  elif have uv; then uv="$(command -v uv)"
-  else
-    warn "uv not found (built from flake.nix); skipping marker-pdf."
-    return
-  fi
-
-  local reinstall=()
-  [ "${MARKER_REINSTALL:-}" = "1" ] && reinstall=(--reinstall)
-  info "Installing marker-pdf[full] (uv tool, torch backend: auto)..."
-  if ! "$uv" tool install "${reinstall[@]}" --python "$MARKER_PYTHON" \
-      --torch-backend auto "marker-pdf[full]"; then
-    warn "marker-pdf install failed (see above). Re-run: $DOTFILES_DIR/install.sh"
-    return
-  fi
-
-  local py check
-  py="$("$uv" tool dir)/marker-pdf/bin/python"
-  # Run a real kernel: is_available() can be true while the wheel lacks this GPU's arch.
-  check="$("$py" - <<'PY' 2>&1
-import torch
-if not torch.cuda.is_available():
-    print(f"cpu torch={torch.__version__}")
-else:
-    torch.ones(8, device="cuda").sum().item()
-    print(f"cuda torch={torch.__version__} gpu={torch.cuda.get_device_name(0)}")
-PY
-)" || check="error ${check##*$'\n'}"
-  case "$check" in
-    cuda*) info "marker-pdf GPU mode OK ($check)." ;;
-    *)
-      if have nvidia-smi; then
-        warn "marker-pdf: NVIDIA GPU present but torch can't use it ($check). Try: MARKER_REINSTALL=1 $DOTFILES_DIR/install.sh"
-      else
-        warn "marker-pdf: no NVIDIA GPU visible (nvidia-smi missing); running on CPU ($check)."
-      fi
-      ;;
-  esac
-}
-
 # --- Agent skills ------------------------------------------------------------
 install_skills() {
   if [ "${SKIP_SKILLS:-}" = "1" ]; then
@@ -368,9 +351,9 @@ main() {
   install_p10k
   link_dotfiles
   install_tools
-  install_marker
   install_nvm
   install_opencode
+  install_cursor_proxy
   install_codegraph
   install_rtk
   install_skills
