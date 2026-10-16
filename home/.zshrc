@@ -148,6 +148,8 @@ alias dotfiles='git -C "$DOTFILES"'
 alias skills-sync='"$DOTFILES/skills.sh"'
 alias skills-update='"$DOTFILES/skills.sh" update'
 export PATH="/usr/local/sbin:$PATH"
+# CLI tools from $DOTFILES/flake.nix, built by install.sh.
+export PATH="$HOME/.local/state/dotfiles/tools/bin:$PATH"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

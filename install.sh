@@ -133,6 +133,43 @@ install_nvm() {
   fi
 }
 
+# --- CLI tools (Nix) ---------------------------------------------------------
+# Builds the package set in flake.nix to a fixed out-link (also a GC root)
+# whose bin/ is on PATH via .zshrc. Never touches the user's Nix profile, so it
+# works with nix-env or `nix profile` setups alike.
+TOOLS_LINK="$HOME/.local/state/dotfiles/tools"
+
+find_nix() {
+  have nix && return 0
+  local f
+  for f in "$HOME/.nix-profile/etc/profile.d/nix.sh" \
+           /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+           /nix/var/nix/profiles/default/etc/profile.d/nix.sh; do
+    # shellcheck disable=SC1090
+    [ -e "$f" ] && . "$f" && have nix && return 0
+  done
+  return 1
+}
+
+install_tools() {
+  if [ "${SKIP_TOOLS:-}" = "1" ]; then
+    info "SKIP_TOOLS=1 set; skipping CLI tools."
+    return
+  fi
+  if ! find_nix; then
+    warn "nix not found; skipping CLI tools (neovim etc.)."
+    return
+  fi
+  info "Building CLI tools from flake.nix..."
+  mkdir -p "$(dirname "$TOOLS_LINK")"
+  if nix --extra-experimental-features 'nix-command flakes' \
+      build "$DOTFILES_DIR#default" --out-link "$TOOLS_LINK"; then
+    info "Tools available in $TOOLS_LINK/bin"
+  else
+    warn "nix build of CLI tools failed (see above). Re-run: $DOTFILES_DIR/install.sh"
+  fi
+}
+
 # --- Agent skills ------------------------------------------------------------
 install_skills() {
   if [ "${SKIP_SKILLS:-}" = "1" ]; then
@@ -168,6 +205,7 @@ main() {
   install_oh_my_zsh
   install_p10k
   link_dotfiles
+  install_tools
   install_nvm
   install_skills
   maybe_set_default_shell
