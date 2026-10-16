@@ -148,6 +148,8 @@ alias dotfiles='git -C "$DOTFILES"'
 alias skills-sync='"$DOTFILES/skills.sh"'
 alias skills-update='"$DOTFILES/skills.sh" update'
 export PATH="/usr/local/sbin:$PATH"
+export CODEGRAPH_TELEMETRY=0
+
 # CLI tools from $DOTFILES/flake.nix and npm --prefix ~/.local, both set up by
 # install.sh.
 export PATH="$HOME/.local/state/dotfiles/tools/bin:$HOME/.local/bin:$PATH"

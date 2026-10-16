@@ -207,6 +207,66 @@ install_opencode() {
   fi
 }
 
+# --- CodeGraph (npm) ---------------------------------------------------------
+# Code-intelligence MCP server. `codegraph install` wires it into Cursor and
+# opencode; it's idempotent, so it runs every time in case either agent's
+# config was reset. Per-project: `codegraph init`.
+install_codegraph() {
+  if [ "${SKIP_CODEGRAPH:-}" = "1" ]; then
+    info "SKIP_CODEGRAPH=1 set; skipping CodeGraph."
+    return
+  fi
+  local bin="$NPM_PREFIX/bin/codegraph"
+  export CODEGRAPH_TELEMETRY=0
+  if [ -x "$bin" ]; then
+    info "CodeGraph already installed ($("$bin" --version 2>/dev/null || echo '?'))."
+  elif ! have npm; then
+    warn "npm not found; skipping CodeGraph."
+    return
+  else
+    info "Installing CodeGraph (npm @colbymchenry/codegraph)..."
+    if ! npm install -g --prefix "$NPM_PREFIX" @colbymchenry/codegraph; then
+      warn "CodeGraph install failed (see above). Re-run: $DOTFILES_DIR/install.sh"
+      return
+    fi
+  fi
+  # Persisted opt-out: MCP servers started by agents may not see shell env.
+  "$bin" telemetry off >/dev/null || warn "Could not disable CodeGraph telemetry."
+  info "Wiring CodeGraph MCP server into Cursor and opencode..."
+  "$bin" install --yes --target cursor,opencode </dev/null \
+    || warn "codegraph install failed (see above). Re-run: $bin install"
+}
+
+# --- RTK (Rust Token Killer) -------------------------------------------------
+# Shell-output compressor for agents (https://github.com/rtk-ai/rtk). Its
+# installer verifies checksums and drops the binary in ~/.local/bin. Hooks:
+# Cursor (~/.cursor/hooks.json) and an opencode plugin. `--opencode` also sets
+# up Claude Code unless limited by --hook-only --no-patch. Both inits are
+# idempotent, and their output is only shown on failure because it always
+# includes Claude Code "manual step" instructions.
+install_rtk() {
+  if [ "${SKIP_RTK:-}" = "1" ]; then
+    info "SKIP_RTK=1 set; skipping RTK."
+    return
+  fi
+  local bin="$NPM_PREFIX/bin/rtk" out
+  if [ -x "$bin" ]; then
+    info "RTK already installed ($("$bin" --version 2>/dev/null || echo '?'))."
+  else
+    info "Installing RTK..."
+    if ! curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh \
+        | RTK_INSTALL_DIR="$NPM_PREFIX/bin" sh; then
+      warn "RTK install failed (see above; set RTK_VERSION=vX.Y.Z if GitHub rate-limited). Re-run: $DOTFILES_DIR/install.sh"
+      return
+    fi
+  fi
+  info "Wiring RTK hooks into Cursor and opencode..."
+  out="$("$bin" init -g --agent cursor </dev/null 2>&1)" \
+    || warn "rtk init (cursor) failed:"$'\n'"$out"
+  out="$("$bin" init -g --opencode --hook-only --no-patch </dev/null 2>&1)" \
+    || warn "rtk init (opencode) failed:"$'\n'"$out"
+}
+
 # --- Agent skills ------------------------------------------------------------
 install_skills() {
   if [ "${SKIP_SKILLS:-}" = "1" ]; then
@@ -245,6 +305,8 @@ main() {
   install_tools
   install_nvm
   install_opencode
+  install_codegraph
+  install_rtk
   install_skills
   maybe_set_default_shell
 
