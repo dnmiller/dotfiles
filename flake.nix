@@ -16,6 +16,7 @@
             neovim
             dust
             tldr
+            gh
           ];
         };
       });
