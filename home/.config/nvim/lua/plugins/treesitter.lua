@@ -2,6 +2,8 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     opts = {
+      -- LazyVim starts vim.treesitter on FileType for these, replacing regex syntax.
+      highlight = { enable = true },
       ensure_installed = {
         "c",
         "cpp",
