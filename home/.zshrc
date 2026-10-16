@@ -160,7 +160,7 @@ if [ -e /home/danielmil/.nix-profile/etc/profile.d/nix.sh ]; then . /home/daniel
 export PATH="$HOME/.poetry/bin:$PATH"
 
 # Pyenv
-eval "$(pyenv init -)"
+(( $+commands[pyenv] )) && eval "$(pyenv init -)"
 
 # nvm (Node Version Manager)
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
