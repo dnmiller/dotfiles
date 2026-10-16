@@ -245,14 +245,9 @@ install_cursor_proxy() {
       || { warn "cursor-api-proxy install failed (see above). Re-run: $DOTFILES_DIR/install.sh"; return; }
   fi
 
-  local agent
-  agent="$(command -v agent || command -v cursor-agent || echo "$NPM_PREFIX/bin/agent")"
-  if [ -n "${CURSOR_API_KEY:-}" ] || "$agent" status --format json 2>/dev/null | grep -q '"isAuthenticated": *true'; then
-    "$NPM_PREFIX/bin/cursor-proxy" sync-models \
-      || warn "Could not sync Cursor models into opencode. Re-run: cursor-proxy sync-models"
-  else
-    info "To use Cursor models in opencode, run once: cursor-proxy login"
-  fi
+  # Signing in is interactive, so it can't happen here. `cursor-proxy login`
+  # signs in and registers the cursor provider with opencode.
+  info "To use Cursor models in opencode, run once: cursor-proxy login"
 }
 
 # --- CodeGraph (npm) ---------------------------------------------------------

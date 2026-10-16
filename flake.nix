@@ -81,6 +81,7 @@
             dust
             tldr
             gh
+            ddgr
             uv
             (llamaCppFor system pkgs)
             # LazyVim dependencies
