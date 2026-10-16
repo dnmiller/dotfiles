@@ -1,6 +1,28 @@
 -- Autocmds are automatically loaded on the VeryLazy event
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 
+-- Reload buffers that changed on disk (e.g. edited by opencode in another pane).
+-- 'autoread' only acts when :checktime runs, and LazyVim only runs it on focus
+-- and terminal events, so also run it when entering a buffer and when idle
+-- (CursorHold fires after 'updatetime'). Buffers with unsaved edits are never
+-- overwritten: nvim warns instead.
+vim.o.autoread = true
+vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "CursorHold", "CursorHoldI" }, {
+  group = vim.api.nvim_create_augroup("autoreload_files", { clear = true }),
+  callback = function()
+    -- :checktime is not allowed in the command-line window or while typing a command.
+    if vim.fn.mode() ~= "c" and vim.fn.getcmdwintype() == "" then
+      vim.cmd("checktime")
+    end
+  end,
+})
+vim.api.nvim_create_autocmd("FileChangedShellPost", {
+  group = vim.api.nvim_create_augroup("autoreload_notify", { clear = true }),
+  callback = function(ev)
+    vim.notify("Reloaded " .. vim.fn.fnamemodify(ev.file, ":~:.") .. " (changed on disk)", vim.log.levels.INFO)
+  end,
+})
+
 -- LazyVim sets conceallevel=2, and markdown's treesitter highlights use it to
 -- hide the backticks around `inline code` and ``` fences (revealed only on the
 -- cursor line). The characters are still in the file, they just aren't drawn.
