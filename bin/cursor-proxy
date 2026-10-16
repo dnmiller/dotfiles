@@ -104,7 +104,7 @@ sync_models() {
     fs.writeFileSync(path, JSON.stringify(cfg, null, 2) + "\n");
     console.error(`Wrote ${ids.length} Cursor models to ${path}`);
   ' "$OC_CONFIG" "$URL"
-  info "Restart opencode to pick them up: opencode2 service restart"
+  info "Restart opencode (opencode2 service restart), then pick a cursor/... model with /models. Don't use /connect; no API key is needed."
 }
 
 login() {
