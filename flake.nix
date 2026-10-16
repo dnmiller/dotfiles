@@ -17,6 +17,12 @@
             dust
             tldr
             gh
+            # LazyVim dependencies
+            ripgrep
+            fd
+            fzf
+            lazygit
+            tree-sitter
           ];
         };
       });

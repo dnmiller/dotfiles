@@ -86,11 +86,21 @@ link_file() {
 link_dotfiles() {
   info "Symlinking dotfiles into $HOME..."
   # Top-level entries in home/ (dotfiles and regular), excluding . and ..
+  # home/.config is shared with other apps, so its children are linked
+  # individually (e.g. ~/.config/nvim) instead of replacing ~/.config.
   local entry name
   shopt -s dotglob nullglob
   for entry in "$HOME_SRC"/*; do
     name="$(basename "$entry")"
-    link_file "$entry" "$HOME/$name"
+    if [ "$name" = ".config" ]; then
+      mkdir -p "$HOME/.config"
+      local child
+      for child in "$entry"/*; do
+        link_file "$child" "$HOME/.config/$(basename "$child")"
+      done
+    else
+      link_file "$entry" "$HOME/$name"
+    fi
   done
   shopt -u dotglob nullglob
 }
