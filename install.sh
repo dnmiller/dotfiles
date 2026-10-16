@@ -245,8 +245,12 @@ install_cursor_proxy() {
       || { warn "cursor-api-proxy install failed (see above). Re-run: $DOTFILES_DIR/install.sh"; return; }
   fi
 
+  # Provider + build/plan/ask agent modes from opencode/base.json, merged into
+  # opencode's config (other keys are kept). The model list needs a sign-in.
+  "$NPM_PREFIX/bin/cursor-proxy" apply-config \
+    || warn "Could not apply opencode/base.json. Re-run: cursor-proxy apply-config"
   # Signing in is interactive, so it can't happen here. `cursor-proxy login`
-  # signs in and registers the cursor provider with opencode.
+  # signs in and fills in the model list.
   info "To use Cursor models in opencode, run once: cursor-proxy login"
 }
 
