@@ -170,6 +170,33 @@ install_tools() {
   fi
 }
 
+# --- OpenCode 2 (npm) --------------------------------------------------------
+# OpenCode 2 ships on npm as @opencode/cli (provides `opencode` and `opencode2`).
+# A user prefix avoids needing write access to the global npm dir.
+NPM_PREFIX="$HOME/.local"
+
+install_opencode() {
+  if [ "${SKIP_OPENCODE:-}" = "1" ]; then
+    info "SKIP_OPENCODE=1 set; skipping OpenCode."
+    return
+  fi
+  if [ -x "$NPM_PREFIX/bin/opencode2" ]; then
+    info "OpenCode already installed ($("$NPM_PREFIX/bin/opencode2" --version 2>/dev/null || echo '?'))."
+    return
+  fi
+  if ! have npm; then
+    warn "npm not found; skipping OpenCode."
+    return
+  fi
+  info "Installing OpenCode 2 (npm @opencode/cli)..."
+  # postinstall selects the platform binary; newer npm skips it unless allowed.
+  if npm install -g --prefix "$NPM_PREFIX" --allow-scripts=@opencode/cli @opencode/cli; then
+    info "Installed OpenCode $("$NPM_PREFIX/bin/opencode2" --version 2>/dev/null || echo '?')"
+  else
+    warn "OpenCode install failed (see above). Re-run: $DOTFILES_DIR/install.sh"
+  fi
+}
+
 # --- Agent skills ------------------------------------------------------------
 install_skills() {
   if [ "${SKIP_SKILLS:-}" = "1" ]; then
@@ -207,6 +234,7 @@ main() {
   link_dotfiles
   install_tools
   install_nvm
+  install_opencode
   install_skills
   maybe_set_default_shell
 
