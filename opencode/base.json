@@ -1,16 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "plugins": ["cursor-opencode-provider@0.8.1"],
-  "providers": {
-    "cursor-proxy": {
-      "name": "Cursor (proxy)",
-      "package": "@opencode/ai/providers/openai-compatible",
-      "settings": {
-        "baseURL": "http://127.0.0.1:8765/v1",
-        "apiKey": "unused"
-      }
-    }
-  },
   "agents": {
     "build": {
       "description": "Cursor agent mode: makes changes and runs tools to get the task done"
@@ -20,7 +10,11 @@
     },
     "ask": {
       "mode": "primary",
-      "description": "Cursor ask mode: answers questions about the code, no changes"
+      "description": "Answers questions about the code: no edits, shell commands need approval",
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "*", "effect": "ask" }
+      ]
     }
   }
 }

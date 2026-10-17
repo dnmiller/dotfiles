@@ -215,44 +215,39 @@ install_opencode() {
 }
 
 # --- Cursor models in opencode -----------------------------------------------
-# cursor-api-proxy serves Cursor's `agent` CLI as an OpenAI-compatible API on
-# 127.0.0.1:8765, and bin/cursor-proxy registers it as opencode provider
-# "cursor". The .zshrc opencode wrappers start the proxy on demand.
-install_cursor_proxy() {
-  if [ "${SKIP_CURSOR_PROXY:-}" = "1" ]; then
-    info "SKIP_CURSOR_PROXY=1 set; skipping Cursor proxy."
+# cursor-opencode-provider (an opencode plugin, provider "cursor"), pinned in
+# opencode/base.json; opencode installs it on start. bin/cursor-provider merges
+# that template into opencode's config and updates the pin.
+install_cursor_provider() {
+  if [ "${SKIP_CURSOR_PROVIDER:-}" = "1" ]; then
+    info "SKIP_CURSOR_PROVIDER=1 set; skipping Cursor provider."
     return
   fi
   mkdir -p "$NPM_PREFIX/bin"
-  link_file "$DOTFILES_DIR/bin/cursor-proxy" "$NPM_PREFIX/bin/cursor-proxy"
+  link_file "$DOTFILES_DIR/bin/cursor-provider" "$NPM_PREFIX/bin/cursor-provider"
 
-  if [ -x "$NPM_PREFIX/bin/agent" ] || have agent || have cursor-agent; then
-    info "Cursor CLI already installed."
-  else
-    info "Installing Cursor CLI (agent)..."
-    curl -fsS https://cursor.com/install | bash \
-      || { warn "Cursor CLI install failed (see above). Re-run: $DOTFILES_DIR/install.sh"; return; }
+  # Earlier setup ran cursor-api-proxy behind a bin/cursor-proxy script.
+  if [ -L "$NPM_PREFIX/bin/cursor-proxy" ] && [ ! -e "$NPM_PREFIX/bin/cursor-proxy" ]; then
+    rm "$NPM_PREFIX/bin/cursor-proxy"
+  fi
+  local pidfile="${XDG_STATE_HOME:-$HOME/.local/state}/cursor-proxy/proxy.pid"
+  if [ -f "$pidfile" ]; then
+    kill "$(cat "$pidfile")" 2>/dev/null && info "Stopped cursor-api-proxy."
+    rm -f "$pidfile"
+  fi
+  if [ -e "$NPM_PREFIX/bin/cursor-api-proxy" ]; then
+    info "Removing cursor-api-proxy (replaced by cursor-opencode-provider)..."
+    npm uninstall -g --prefix "$NPM_PREFIX" cursor-api-proxy >/dev/null \
+      || warn "Could not uninstall cursor-api-proxy."
   fi
 
-  if [ -x "$NPM_PREFIX/bin/cursor-api-proxy" ]; then
-    info "cursor-api-proxy already installed."
-  elif ! have npm; then
-    warn "npm not found; skipping cursor-api-proxy."
-    return
-  else
-    info "Installing cursor-api-proxy (npm)..."
-    npm install -g --prefix "$NPM_PREFIX" cursor-api-proxy \
-      || { warn "cursor-api-proxy install failed (see above). Re-run: $DOTFILES_DIR/install.sh"; return; }
-  fi
-
-  # cursor-opencode-provider pin, the backup proxy provider, and build/plan/ask
-  # agents from opencode/base.json, merged into opencode's config (other keys
-  # are kept). Model lists need a sign-in.
-  "$NPM_PREFIX/bin/cursor-proxy" apply-config \
-    || warn "Could not apply opencode/base.json. Re-run: cursor-proxy apply-config"
+  # Plugin pin and build/plan/ask agents from opencode/base.json, merged into
+  # opencode's config (other keys are kept).
+  "$NPM_PREFIX/bin/cursor-provider" apply-config \
+    || warn "Could not apply opencode/base.json. Re-run: cursor-provider apply-config"
   # Signing in is interactive, so it can't happen here.
-  info "To use Cursor models in opencode: run /connect -> Cursor inside opencode (provider \"cursor\")."
-  info "Backup provider \"cursor-proxy\": run once: cursor-proxy login. Update the pinned provider: cursor-proxy provider-update"
+  info "To use Cursor models in opencode: run /connect -> Cursor inside opencode."
+  info "Update the pinned provider: cursor-provider update (roll back: cursor-provider update <version>)"
 }
 
 # --- CodeGraph (npm) ---------------------------------------------------------
@@ -353,7 +348,7 @@ main() {
   install_tools
   install_nvm
   install_opencode
-  install_cursor_proxy
+  install_cursor_provider
   install_codegraph
   install_rtk
   install_skills

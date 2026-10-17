@@ -14,12 +14,9 @@ return {
       ---@type opencode.Opts
       vim.g.opencode_opts = {
         server = {
-          -- Start the Cursor proxy first (see bin/cursor-proxy) so cursor/...
-          -- models work; `term://` runs in a non-interactive shell, so the
-          -- .zshrc opencode wrappers aren't available here.
           start = function()
             vim.cmd("vsplit")
-            vim.cmd.terminal("sh -c 'command -v cursor-proxy >/dev/null && cursor-proxy start --quiet; exec opencode'")
+            vim.cmd.terminal("opencode")
             vim.cmd("wincmd p")
           end,
         },
