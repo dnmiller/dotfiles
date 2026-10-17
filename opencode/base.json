@@ -1,8 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "plugins": ["cursor-opencode-provider@0.8.1"],
   "providers": {
-    "cursor": {
-      "name": "Cursor",
+    "cursor-proxy": {
+      "name": "Cursor (proxy)",
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
         "baseURL": "http://127.0.0.1:8765/v1",
