@@ -29,6 +29,23 @@ warn()  { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# "container" or "host"; set DOTFILES_ENV to override the guess.
+detect_env() {
+  if [ -n "${DOTFILES_ENV:-}" ]; then
+    printf '%s\n' "$DOTFILES_ENV"
+  elif [ -e /.dockerenv ] || [ -e /run/.containerenv ] \
+      || [ -n "${REMOTE_CONTAINERS:-}${CODESPACES:-}${container:-}" ]; then
+    echo container
+  else
+    echo host
+  fi
+}
+DOTFILES_ENV="$(detect_env)"
+case "$DOTFILES_ENV" in
+  container|host) ;;
+  *) echo "DOTFILES_ENV must be 'container' or 'host' (got '$DOTFILES_ENV')." >&2; exit 1 ;;
+esac
+
 # True if a node is on PATH that satisfies NODE_MIN_MAJOR.NODE_MIN_MINOR.
 node_ok() {
   have node || return 1
@@ -170,10 +187,12 @@ install_tools() {
     warn "nix not found; skipping CLI tools (neovim etc.)."
     return
   fi
-  info "Building CLI tools from flake.nix..."
+  local pkg=default
+  [ "$DOTFILES_ENV" = container ] && pkg=container
+  info "Building CLI tools from flake.nix (#$pkg)..."
   mkdir -p "$(dirname "$TOOLS_LINK")"
   if nix --extra-experimental-features 'nix-command flakes' \
-      build "$DOTFILES_DIR#default" --out-link "$TOOLS_LINK"; then
+      build "$DOTFILES_DIR#$pkg" --out-link "$TOOLS_LINK"; then
     info "Tools available in $TOOLS_LINK/bin"
   else
     warn "nix build of CLI tools failed (see above). Re-run: $DOTFILES_DIR/install.sh"
@@ -248,6 +267,35 @@ install_cursor_provider() {
   # Signing in is interactive, so it can't happen here.
   info "To use Cursor models in opencode: run /connect -> Cursor inside opencode."
   info "Update the pinned provider: cursor-provider update (roll back: cursor-provider update <version>)"
+}
+
+# --- Local model (hosts) -----------------------------------------------------
+# Qwen3-Coder-Next on llama.cpp's llama-server (bin/local-llm), added to opencode
+# as provider "llama-cpp". Hosts only, and only with memory for the model
+# (~49 GB) plus context; LOCAL_LLM=1 or LOCAL_LLM=0 overrides that.
+mem_gib() {
+  if [ "$(uname)" = Darwin ]; then
+    echo $(( $(sysctl -n hw.memsize) / 1073741824 ))
+  else
+    awk '/^MemTotal:/ { print int($2 / 1048576) }' /proc/meminfo
+  fi
+}
+
+install_local_llm() {
+  local want="${LOCAL_LLM:-}"
+  if [ -z "$want" ]; then
+    want=0
+    [ "$DOTFILES_ENV" = host ] && [ "$(mem_gib)" -ge 64 ] && want=1
+  fi
+  if [ "$want" != 1 ]; then
+    info "Skipping the local model (needs a host with 64 GB+ of memory; LOCAL_LLM=1 forces it)."
+    return
+  fi
+  mkdir -p "$NPM_PREFIX/bin"
+  link_file "$DOTFILES_DIR/bin/local-llm" "$NPM_PREFIX/bin/local-llm"
+  "$NPM_PREFIX/bin/local-llm" apply-config \
+    || warn "Could not add the local model to opencode. Re-run: local-llm apply-config"
+  info "Local model: run local-llm start (the first start downloads ~49 GB), then pick llama-cpp/qwen3-coder-next in opencode's /models."
 }
 
 # --- CodeGraph (npm) ---------------------------------------------------------
@@ -369,6 +417,7 @@ maybe_set_default_shell() {
 main() {
   have git  || { echo "git is required." >&2; exit 1; }
   have curl || { echo "curl is required." >&2; exit 1; }
+  info "Installing for a $DOTFILES_ENV (override with DOTFILES_ENV=container|host)."
 
   install_oh_my_zsh
   install_p10k
@@ -377,6 +426,7 @@ main() {
   install_nvm
   install_opencode
   install_cursor_provider
+  install_local_llm
   install_codegraph
   install_rtk
   install_caveman

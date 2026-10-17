@@ -71,28 +71,35 @@
           # runtime M1/M2-M3/M4 CPU dispatch, and it's in cache.nixos.org; any
           # override would force a slow local compile on a fanless laptop.
           pkgs.llama-cpp;
+      commonTools = pkgs: with pkgs; [
+        neovim
+        dust
+        tldr
+        gh
+        ddgr
+        uv
+        # LazyVim dependencies
+        ripgrep
+        fd
+        fzf
+        lazygit
+        tree-sitter
+      ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+        xdg-utils # xdg-open; macOS has `open`
+      ];
     in
     {
+      # install.sh builds `default` on hosts and `container` in containers.
       packages = forAllSystems (system: pkgs: {
         default = pkgs.buildEnv {
           name = "dotfiles-tools";
-          paths = with pkgs; [
-            neovim
-            dust
-            tldr
-            gh
-            ddgr
-            uv
-            (llamaCppFor system pkgs)
-            # LazyVim dependencies
-            ripgrep
-            fd
-            fzf
-            lazygit
-            tree-sitter
-          ] ++ lib.optionals stdenv.hostPlatform.isLinux [
-            xdg-utils # xdg-open; macOS has `open`
-          ];
+          paths = commonTools pkgs ++ [ (llamaCppFor system pkgs) ];
+        };
+        # No llama.cpp: the CUDA build compiles from source, and containers
+        # usually have no GPU passed through.
+        container = pkgs.buildEnv {
+          name = "dotfiles-tools-container";
+          paths = commonTools pkgs;
         };
       });
     };
