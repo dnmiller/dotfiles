@@ -17,5 +17,9 @@
 # https://github.com/mattpocock/skills  -- Skills for Real Engineers
 mattpocock/skills
 
+# https://github.com/obra/superpowers/tree/main/skills/brainstorming
+obra/superpowers brainstorming
+obra/superpowers requesting-code-review
+
 # Personal skills in this repo.
 ./skills
