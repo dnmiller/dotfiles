@@ -90,6 +90,8 @@
             fzf
             lazygit
             tree-sitter
+          ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+            xdg-utils # xdg-open; macOS has `open`
           ];
         };
       });
