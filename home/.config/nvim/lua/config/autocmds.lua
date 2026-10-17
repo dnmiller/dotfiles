@@ -12,14 +12,25 @@ vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "CursorHold", "CursorHo
   callback = function()
     -- :checktime is not allowed in the command-line window or while typing a command.
     if vim.fn.mode() ~= "c" and vim.fn.getcmdwintype() == "" then
-      vim.cmd("checktime")
+      -- Scheduled so it runs after the autocmd finishes: nvim skips timestamp
+      -- checks while an autocmd is still executing.
+      vim.schedule(function()
+        if vim.fn.mode() ~= "c" and vim.fn.getcmdwintype() == "" then
+          vim.cmd("checktime")
+        end
+      end)
     end
   end,
 })
 vim.api.nvim_create_autocmd("FileChangedShellPost", {
   group = vim.api.nvim_create_augroup("autoreload_notify", { clear = true }),
   callback = function(ev)
-    vim.notify("Reloaded " .. vim.fn.fnamemodify(ev.file, ":~:.") .. " (changed on disk)", vim.log.levels.INFO)
+    local name = vim.fn.fnamemodify(ev.file, ":~:.")
+    if vim.bo[ev.buf].modified then
+      vim.notify(name .. " changed on disk but has unsaved edits; not reloaded", vim.log.levels.WARN)
+    else
+      vim.notify("Reloaded " .. name .. " (changed on disk)", vim.log.levels.INFO)
+    end
   end,
 })
 

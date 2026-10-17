@@ -12,17 +12,14 @@
   },
   "agents": {
     "build": {
-      "description": "Cursor agent mode: makes changes and runs tools to get the task done",
-      "request": { "body": { "mode": "agent" } }
+      "description": "Cursor agent mode: makes changes and runs tools to get the task done"
     },
     "plan": {
-      "description": "Cursor plan mode: researches and proposes a plan, no changes until you approve",
-      "request": { "body": { "mode": "plan" } }
+      "description": "Cursor plan mode: researches and proposes a plan, no changes until you approve"
     },
     "ask": {
       "mode": "primary",
-      "description": "Cursor ask mode: answers questions about the code, no changes",
-      "request": { "body": { "mode": "ask" } }
+      "description": "Cursor ask mode: answers questions about the code, no changes"
     }
   }
 }
