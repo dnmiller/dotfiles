@@ -21,5 +21,8 @@ mattpocock/skills
 obra/superpowers brainstorming
 obra/superpowers requesting-code-review
 
+# https://github.com/DietrichGebert/ponytail  -- write only what the task needs
+DietrichGebert/ponytail
+
 # Personal skills in this repo.
 ./skills
