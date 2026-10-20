@@ -175,9 +175,9 @@ export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 _ensure_ssh_agent() {
   if [[ -n "${SSH_AUTH_SOCK:-}" && -S "${SSH_AUTH_SOCK}" ]]; then
     ssh-add -l >/dev/null 2>&1
-    local status=$?
+    local rc=$?
     # 0 = identities loaded, 1 = agent up but empty, 2 = cannot reach the agent.
-    [[ "$status" -ne 2 ]] && return 0
+    [[ "$rc" -ne 2 ]] && return 0
   fi
   eval "$(ssh-agent -s)" >/dev/null
 }
