@@ -93,10 +93,11 @@
       packages = forAllSystems (system: pkgs: {
         default = pkgs.buildEnv {
           name = "dotfiles-tools";
-          paths = commonTools pkgs ++ [ (llamaCppFor system pkgs) ];
+          # socat forwards llama-server to Docker networks (bin/local-llm).
+          paths = commonTools pkgs ++ [ (llamaCppFor system pkgs) pkgs.socat ];
         };
-        # No llama.cpp: the CUDA build compiles from source, and containers
-        # usually have no GPU passed through.
+        # No llama.cpp: the CUDA build compiles from source, and containers use
+        # the host's server instead.
         container = pkgs.buildEnv {
           name = "dotfiles-tools-container";
           paths = commonTools pkgs;

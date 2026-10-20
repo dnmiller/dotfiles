@@ -269,10 +269,11 @@ install_cursor_provider() {
   info "Update the pinned provider: cursor-provider update (roll back: cursor-provider update <version>)"
 }
 
-# --- Local model (hosts) -----------------------------------------------------
+# --- Local model --------------------------------------------------------------
 # Qwen3-Coder-Next on llama.cpp's llama-server (bin/local-llm), added to opencode
-# as provider "llama-cpp". Hosts only, and only with memory for the model
-# (~49 GB) plus context; LOCAL_LLM=1 or LOCAL_LLM=0 overrides that.
+# as provider "llama-cpp". The server runs on hosts with memory for the model
+# (~49 GB) plus context; containers use the host's server if it's reachable.
+# LOCAL_LLM=1 or LOCAL_LLM=0 overrides either guess.
 mem_gib() {
   if [ "$(uname)" = Darwin ]; then
     echo $(( $(sysctl -n hw.memsize) / 1073741824 ))
@@ -282,18 +283,29 @@ mem_gib() {
 }
 
 install_local_llm() {
-  local want="${LOCAL_LLM:-}"
-  if [ -z "$want" ]; then
-    want=0
-    [ "$DOTFILES_ENV" = host ] && [ "$(mem_gib)" -ge 64 ] && want=1
+  local want="${LOCAL_LLM:-}" llm="$NPM_PREFIX/bin/local-llm"
+  if [ "$want" = 0 ]; then
+    info "Skipping the local model (LOCAL_LLM=0)."
+    return
   fi
-  if [ "$want" != 1 ]; then
-    info "Skipping the local model (needs a host with 64 GB+ of memory; LOCAL_LLM=1 forces it)."
+  if [ "$DOTFILES_ENV" = container ]; then
+    mkdir -p "$NPM_PREFIX/bin"
+    link_file "$DOTFILES_DIR/bin/local-llm" "$llm"
+    if [ "$want" != 1 ] && ! DOTFILES_ENV=container "$llm" status >/dev/null 2>&1; then
+      info "No local model server reachable on the host; skipping it. Once it runs (local-llm start on the host), run local-llm apply-config here."
+      return
+    fi
+    DOTFILES_ENV=container "$llm" apply-config \
+      || warn "Could not add the host's local model to opencode. Re-run: local-llm apply-config"
+    return
+  fi
+  if [ "$want" != 1 ] && [ "$(mem_gib)" -lt 64 ]; then
+    info "Skipping the local model (needs 64 GB+ of memory; LOCAL_LLM=1 forces it)."
     return
   fi
   mkdir -p "$NPM_PREFIX/bin"
-  link_file "$DOTFILES_DIR/bin/local-llm" "$NPM_PREFIX/bin/local-llm"
-  "$NPM_PREFIX/bin/local-llm" apply-config \
+  link_file "$DOTFILES_DIR/bin/local-llm" "$llm"
+  DOTFILES_ENV=host "$llm" apply-config \
     || warn "Could not add the local model to opencode. Re-run: local-llm apply-config"
   info "Local model: run local-llm start (the first start downloads ~49 GB), then pick llama-cpp/qwen3-coder-next in opencode's /models."
 }
