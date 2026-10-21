@@ -317,6 +317,32 @@ install_local_llm() {
 # Code-intelligence MCP server. `codegraph install` wires it into Cursor and
 # opencode; it's idempotent, so it runs every time in case either agent's
 # config was reset. Per-project: `codegraph init`.
+# --- omp MCP servers -----------------------------------------------------------
+# omp (oh-my-pi, from the flake) already reads Cursor's and opencode's MCP
+# configs; servers only omp needs go in its own ~/.omp/agent/mcp.json. Linear's
+# hosted server signs in with OAuth once, inside omp: /mcp reauth linear. omp
+# keeps that credential in its own auth store, not in this file.
+install_omp_mcp() {
+  [ -x "$TOOLS_LINK/bin/omp" ] || have omp || { info "omp not installed; skipping its MCP servers."; return; }
+  have node || { warn "node not found; skipping omp MCP servers."; return; }
+  local cfg="${PI_CODING_AGENT_DIR:-$HOME/.omp/agent}/mcp.json"
+  mkdir -p "$(dirname "$cfg")"
+  node -e '
+    const fs = require("fs");
+    const path = process.argv[1];
+    let cfg = {};
+    if (fs.existsSync(path)) {
+      try { cfg = JSON.parse(fs.readFileSync(path, "utf8")); }
+      catch (e) { console.error(`${path} is not plain JSON (${e.message}); not touching it.`); process.exit(1); }
+    }
+    cfg.$schema ??= "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json";
+    cfg.mcpServers ??= {};
+    cfg.mcpServers.linear = { ...cfg.mcpServers.linear, type: "http", url: "https://mcp.linear.app/mcp" };
+    fs.writeFileSync(path, JSON.stringify(cfg, null, 2) + "\n");
+  ' "$cfg" || { warn "Could not add Linear to $cfg."; return; }
+  info "omp: Linear MCP server in $cfg (sign in inside omp: /mcp reauth linear)."
+}
+
 install_codegraph() {
   if [ "${SKIP_CODEGRAPH:-}" = "1" ]; then
     info "SKIP_CODEGRAPH=1 set; skipping CodeGraph."
@@ -443,6 +469,7 @@ main() {
   install_cursor_provider
   install_local_llm
   install_codegraph
+  install_omp_mcp
   install_rtk
   install_caveman
   install_skills
