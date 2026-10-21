@@ -2,8 +2,11 @@
   description = "CLI tools installed by install.sh";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  # oh-my-pi coding agent (`omp`). Keeps its own nixpkgs, Bun and Rust pins;
+  # not in a binary cache, so it builds from source on first install.
+  inputs.omp.url = "github:can1357/oh-my-pi";
 
-  outputs = { nixpkgs, ... }:
+  outputs = { nixpkgs, omp, ... }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (s: f s nixpkgs.legacyPackages.${s});
@@ -71,7 +74,8 @@
           # runtime M1/M2-M3/M4 CPU dispatch, and it's in cache.nixos.org; any
           # override would force a slow local compile on a fanless laptop.
           pkgs.llama-cpp;
-      commonTools = pkgs: with pkgs; [
+      commonTools = system: pkgs: with pkgs; [
+        omp.packages.${system}.omp
         neovim
         dust
         tldr
@@ -94,13 +98,13 @@
         default = pkgs.buildEnv {
           name = "dotfiles-tools";
           # socat forwards llama-server to Docker networks (bin/local-llm).
-          paths = commonTools pkgs ++ [ (llamaCppFor system pkgs) pkgs.socat ];
+          paths = commonTools system pkgs ++ [ (llamaCppFor system pkgs) pkgs.socat ];
         };
         # No llama.cpp: the CUDA build compiles from source, and containers use
         # the host's server instead.
         container = pkgs.buildEnv {
           name = "dotfiles-tools-container";
-          paths = commonTools pkgs;
+          paths = commonTools system pkgs;
         };
       });
     };

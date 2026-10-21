@@ -121,7 +121,8 @@ do_install() {
     for s in "${skills[@]}"; do skill_flags+=(-s "$s"); done
 
     info "add $resolved  (skills: ${skills[*]})"
-    npx --yes skills@latest add "$resolved" "${agent_flags[@]}" "${scope_flag[@]}" "${skill_flags[@]}" -y
+    # </dev/null: npx would otherwise read the rest of the manifest from stdin.
+    npx --yes skills@latest add "$resolved" "${agent_flags[@]}" "${scope_flag[@]}" "${skill_flags[@]}" -y </dev/null
     count=$((count + 1))
   done < "$MANIFEST"
 
