@@ -191,8 +191,11 @@ install_tools() {
   [ "$DOTFILES_ENV" = container ] && pkg=container
   info "Building CLI tools from flake.nix (#$pkg)..."
   mkdir -p "$(dirname "$TOOLS_LINK")"
+  # Nix builds one derivation at a time by default (max-jobs = 1), which
+  # serializes the hundreds of small source fetches in omp's build.
   if nix --extra-experimental-features 'nix-command flakes' \
-      build "$DOTFILES_DIR#$pkg" --out-link "$TOOLS_LINK"; then
+      build "$DOTFILES_DIR#$pkg" --out-link "$TOOLS_LINK" \
+      --max-jobs "${NIX_MAX_JOBS:-auto}"; then
     info "Tools available in $TOOLS_LINK/bin"
   else
     warn "nix build of CLI tools failed (see above). Re-run: $DOTFILES_DIR/install.sh"
