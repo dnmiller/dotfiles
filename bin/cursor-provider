@@ -7,8 +7,9 @@
 #   cursor-provider status          pinned vs latest cursor-opencode-provider
 #   cursor-provider update [V]      pin version V (default: latest) in
 #                                   opencode/base.json, apply it, restart opencode
-#   cursor-provider apply-config    merge opencode/base.json (plugin pin, agents)
-#                                   into opencode's config; offline, no sign-in
+#   cursor-provider apply-config    merge opencode/base.json (plugin pin, agents,
+#                                   instructions) into opencode's config; offline,
+#                                   no sign-in
 #   cursor-provider debug on|off    provider debug log for the opencode service
 #                                   (on clears old logs); restarts the service
 #   cursor-provider tools [LOG...]  summarize the debug logs: requests per model
@@ -35,8 +36,9 @@ die()  { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 node_bin() { command -v node || die "node not found."; }
 
 # Merge the repo template (opencode/base.json: provider plugin pin, build/plan/ask
-# agents) into opencode's config. The template wins for the keys it defines;
-# "plugins" entries are merged by package name so other plugins stay. Everything
+# agents, instructions) into opencode's config. The template wins for the keys it
+# defines; "plugins" entries are merged by package name and "instructions" by path,
+# so other entries stay. Everything
 # else (MCP servers, tool edits) is left alone, and the live file stays a normal
 # file that other tools can keep editing. Also removes what the old
 # cursor-api-proxy setup added. Works offline and before sign-in.
@@ -98,6 +100,14 @@ apply_config() {
     delete template.plugins;
     const replaced = new Set(tplPlugins.map(pkgName));
     cfg.plugins = [...(cfg.plugins ?? []).filter((p) => !replaced.has(pkgName(p))), ...tplPlugins];
+
+    // Template instructions are relative to the template; other entries stay.
+    const { dirname, resolve } = require("path");
+    const tplInstructions = (template.instructions ?? []).map((p) => resolve(dirname(templatePath), p));
+    delete template.instructions;
+    if (tplInstructions.length) {
+      cfg.instructions = [...new Set([...(cfg.instructions ?? []), ...tplInstructions])];
+    }
 
     merge(cfg, template);
     fs.writeFileSync(path, JSON.stringify(cfg, null, 2) + "\n");
@@ -254,5 +264,5 @@ case "${1:-}" in
   apply-config) apply_config ;;
   debug)        debug "${2:-}" ;;
   tools)        shift; tools "$@" ;;
-  *)            sed -n '3,19p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *)            sed -n '3,20p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

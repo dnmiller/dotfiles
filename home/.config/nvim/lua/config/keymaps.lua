@@ -10,3 +10,10 @@ vim.keymap.set("i", "jk", "<Esc>", { desc = "Exit insert mode" })
 -- normal-mode <Nop> stops a repeat Cmd+C from becoming Esc + a pending `y`.
 vim.keymap.set("x", "<M-y>", '"+ygv', { desc = "Copy selection to system clipboard" })
 vim.keymap.set({ "n", "i", "o" }, "<M-y>", "<Nop>", { desc = "Cmd+C with no selection" })
+
+-- Path is relative to Neovim's cwd, e.g. lua/config/keymaps.lua:12.
+vim.keymap.set("n", "<leader>fy", function()
+  local ref = vim.fn.expand("%:.") .. ":" .. vim.fn.line(".")
+  vim.fn.setreg("+", ref)
+  vim.notify("Copied " .. ref)
+end, { desc = "Copy file:line" })
