@@ -263,12 +263,13 @@ install_cursor_provider() {
       || warn "Could not uninstall cursor-api-proxy."
   fi
 
-  # Plugin pin and build/plan/ask agents from opencode/base.json, merged into
-  # opencode's config (other keys are kept).
+  # Plugin pin, build/plan/ask agents and MCP servers from opencode/base.json,
+  # merged into opencode's config (other keys are kept).
   "$NPM_PREFIX/bin/cursor-provider" apply-config \
     || warn "Could not apply opencode/base.json. Re-run: cursor-provider apply-config"
   # Signing in is interactive, so it can't happen here.
   info "To use Cursor models in opencode: run /connect -> Cursor inside opencode."
+  info "To use Linear in opencode: run opencode mcp auth linear (once per machine or container)."
   info "Update the pinned provider: cursor-provider update (roll back: cursor-provider update <version>)"
 }
 

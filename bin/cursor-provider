@@ -8,8 +8,8 @@
 #   cursor-provider update [V]      pin version V (default: latest) in
 #                                   opencode/base.json, apply it, restart opencode
 #   cursor-provider apply-config    merge opencode/base.json (plugin pin, agents,
-#                                   instructions) into opencode's config; offline,
-#                                   no sign-in
+#                                   instructions, MCP servers) into opencode's
+#                                   config; offline, no sign-in
 #   cursor-provider debug on|off    provider debug log for the opencode service
 #                                   (on clears old logs); restarts the service
 #   cursor-provider tools [LOG...]  summarize the debug logs: requests per model
@@ -36,10 +36,10 @@ die()  { printf '\033[1;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 node_bin() { command -v node || die "node not found."; }
 
 # Merge the repo template (opencode/base.json: provider plugin pin, build/plan/ask
-# agents, instructions) into opencode's config. The template wins for the keys it
-# defines; "plugins" entries are merged by package name and "instructions" by path,
-# so other entries stay. Everything
-# else (MCP servers, tool edits) is left alone, and the live file stays a normal
+# agents, instructions, MCP servers) into opencode's config. The template wins for
+# the keys it defines; "plugins" entries are merged by package name and
+# "instructions" by path, and objects merge key by key, so other entries (other MCP
+# servers, tool edits) stay and the live file remains a normal
 # file that other tools can keep editing. Also removes what the old
 # cursor-api-proxy setup added. Works offline and before sign-in.
 apply_config() {
