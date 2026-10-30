@@ -34,6 +34,18 @@ vim.api.nvim_create_autocmd("FileChangedShellPost", {
   end,
 })
 
+-- LazyVim's default is nowrap, but its wrap_spell autocmd turns wrap on for
+-- text, markdown, gitcommit and similar files. This FileType autocmd is created
+-- after LazyVim's, so it runs later and wins. Spell checking is left alone.
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("nowrap_files", { clear = true }),
+  callback = function(ev)
+    if vim.bo[ev.buf].buftype == "" and vim.bo[ev.buf].modifiable then
+      vim.opt_local.wrap = false
+    end
+  end,
+})
+
 -- LazyVim sets conceallevel=2, and markdown's treesitter highlights use it to
 -- hide the backticks around `inline code` and ``` fences (revealed only on the
 -- cursor line). The characters are still in the file, they just aren't drawn.
