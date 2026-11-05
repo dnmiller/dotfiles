@@ -368,6 +368,12 @@ install_codegraph() {
   info "Wiring CodeGraph MCP server into Cursor and opencode..."
   "$bin" install --yes --target cursor,opencode </dev/null \
     || warn "codegraph install failed (see above). Re-run: $bin install"
+  # opencode/explore.md already says when to use CodeGraph; drop the duplicate
+  # block that `codegraph install` writes on every run.
+  local agents_md="$HOME/.config/opencode/AGENTS.md"
+  if [ -f "$agents_md" ]; then
+    sed -i.bak '/<!-- CODEGRAPH_START -->/,/<!-- CODEGRAPH_END -->/d' "$agents_md" && rm -f "$agents_md.bak"
+  fi
 }
 
 # --- RTK (Rust Token Killer) -------------------------------------------------
@@ -400,32 +406,19 @@ install_rtk() {
     || warn "rtk init (opencode) failed:"$'\n'"$out"
 }
 
-# --- Caveman (opencode) ------------------------------------------------------
-# Terse-reply mode for opencode (https://github.com/JuliusBrussee/caveman): its
-# own opencode installer adds a plugin, skills, /caveman commands, cavecrew
-# subagents and an always-on rule block in ~/.config/opencode/AGENTS.md. Only
-# that integration: caveman's CLI and proxy (which collects usage stats) are
-# not installed. The installer needs a local checkout, kept at the pinned tag;
-# it is idempotent and refreshes its own files, so it runs every time.
-CAVEMAN_REF="v4.0.1"
-
-install_caveman() {
-  if [ "${SKIP_CAVEMAN:-}" = "1" ]; then
-    info "SKIP_CAVEMAN=1 set; skipping caveman."
-    return
-  fi
-  have node || { warn "node not found; skipping caveman."; return; }
-  have opencode || [ -x "$NPM_PREFIX/bin/opencode" ] || { info "opencode not installed; skipping caveman."; return; }
-  local dir="$HOME/.local/state/dotfiles/caveman"
-  if [ "$(git -C "$dir" describe --tags --exact-match 2>/dev/null)" != "$CAVEMAN_REF" ]; then
-    info "Fetching caveman $CAVEMAN_REF..."
-    rm -rf "$dir"
-    git -c advice.detachedHead=false clone -q --depth 1 --branch "$CAVEMAN_REF" https://github.com/JuliusBrussee/caveman.git "$dir" \
-      || { warn "caveman download failed. Re-run: $DOTFILES_DIR/install.sh"; return; }
-  fi
-  info "Installing caveman into opencode..."
-  (cd "$dir" && DO_NOT_TRACK=1 node installer/install.js --only opencode --non-interactive >/dev/null) \
-    || warn "caveman install failed. Re-run: cd $dir && node installer/install.js --only opencode"
+# --- Caveman (removed) -------------------------------------------------------
+# Earlier installs added caveman (https://github.com/JuliusBrussee/caveman) to
+# opencode; ponytail covers reply style now. Its own uninstaller removes exactly
+# the files it recorded owning, plus its AGENTS.md block.
+remove_caveman() {
+  local dir="$HOME/.local/state/dotfiles/caveman" cfg="$HOME/.config/opencode"
+  [ -f "$cfg/.caveman-opencode-ownership.json" ] || return 0
+  [ -f "$dir/installer/install.js" ] && have node \
+    || { warn "caveman is still in $cfg, but its uninstaller is missing."; return; }
+  info "Removing caveman from opencode..."
+  (cd "$dir" && DO_NOT_TRACK=1 node installer/install.js --uninstall --non-interactive >/dev/null) \
+    || { warn "caveman uninstall failed. Re-run: cd $dir && node installer/install.js --uninstall"; return; }
+  rm -rf "$dir" "$cfg/.caveman-active" "$cfg/.caveman-mode-log.jsonl"
 }
 
 # --- Agent skills ------------------------------------------------------------
@@ -472,7 +465,7 @@ main() {
   install_codegraph
   install_omp_mcp
   install_rtk
-  install_caveman
+  remove_caveman
   install_skills
   maybe_set_default_shell
 

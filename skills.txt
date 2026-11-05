@@ -13,13 +13,16 @@
 # stripped. Skills are installed globally for Cursor (~/.cursor/skills/).
 # Override the target agent(s) with SKILLS_AGENTS, or scope with
 # SKILLS_SCOPE=project. See skills.sh.
+#
+# Every skill's description is sent with every agent prompt, so list only the
+# ones in use. skills.sh removes installed skills that are no longer listed.
 
 # https://github.com/mattpocock/skills  -- Skills for Real Engineers
-mattpocock/skills
+# grill-me hands off to grilling.
+mattpocock/skills grill-me grilling
 
 # https://github.com/obra/superpowers/tree/main/skills/brainstorming
 obra/superpowers brainstorming
-obra/superpowers requesting-code-review
 
 # https://github.com/DietrichGebert/ponytail  -- write only what the task needs
 DietrichGebert/ponytail

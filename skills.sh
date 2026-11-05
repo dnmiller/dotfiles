@@ -4,7 +4,8 @@
 # (https://github.com/vercel-labs/skills).
 #
 # Usage:
-#   ./skills.sh            # install every source in skills.txt
+#   ./skills.sh            # install every source in skills.txt, then remove
+#                          # global skills it no longer lists
 #   ./skills.sh update     # update already-installed skills to latest
 #
 # Config (env vars):
@@ -123,10 +124,36 @@ do_install() {
     info "add $resolved  (skills: ${skills[*]})"
     # </dev/null: npx would otherwise read the rest of the manifest from stdin.
     npx --yes skills@latest add "$resolved" "${agent_flags[@]}" "${scope_flag[@]}" "${skill_flags[@]}" -y </dev/null
+    wanted+=("$resolved ${skills[*]}")
     count=$((count + 1))
   done < "$MANIFEST"
 
   info "Done. Installed from $count source(s)."
+  prune
+}
+
+# Remove globally installed skills the manifest no longer lists: a source that
+# is gone, or a skill missing from its source's explicit list.
+wanted=()
+prune() {
+  local lock="$HOME/.agents/.skill-lock.json" stale
+  if [ "$SCOPE" != "global" ] || [ ! -f "$lock" ]; then return; fi
+  stale="$(printf '%s\n' "${wanted[@]}" | node -e '
+    const lock = require(process.argv[1]).skills ?? {};
+    const want = new Map();
+    for (const line of require("fs").readFileSync(0, "utf8").split("\n").filter(Boolean)) {
+      const [source, ...skills] = line.split(" ");
+      want.set(source, skills.includes("*") ? null : new Set([...(want.get(source) ?? []), ...skills]));
+    }
+    for (const [name, { source }] of Object.entries(lock)) {
+      const skills = want.get(source);
+      if (skills === undefined || (skills !== null && !skills.has(name))) console.log(name);
+    }
+  ' "$lock")"
+  [ -n "$stale" ] || return 0
+  info "Removing skills no longer in $MANIFEST: $(echo $stale)"
+  # shellcheck disable=SC2086
+  npx --yes skills@latest remove -g -y $stale </dev/null
 }
 
 main() {

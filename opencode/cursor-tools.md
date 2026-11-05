@@ -6,6 +6,7 @@ OpenCode's skills and MCP servers are not top-level functions on Cursor models. 
 
 - Skill: if it is listed with a SKILL.md path, read that file. Otherwise call namespace `opencode`, tool `skill`.
 - CodeGraph: namespace `codegraph`, tool `codegraph_explore`.
+- Other MCP servers (Linear, Context7 for library docs): the namespace is the server name, `linear` or `context7`.
 - Any other OpenCode or plugin tool: namespace `opencode`.
 
 Fetch a tool's schema with GetDynamicTools once, then call it with CallDynamicTool.
